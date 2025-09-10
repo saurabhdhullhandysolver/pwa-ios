@@ -1,0 +1,42 @@
+workflows:
+  ios-build:
+    name: Build iOS App
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+    environment:
+      xcode: latest
+    scripts:
+      # Install CocoaPods if Podfile exists
+      - name: Install CocoaPods
+        script: |
+          if [ -f "./Podfile" ]; then
+            pod repo update
+            pod install
+          fi
+      # Build and archive the app
+      - name: Archive Xcode Project
+        script: |
+          xcodebuild clean -workspace MyHandydash.xcworkspace \
+            -scheme MyHandydash \
+            -configuration Release \
+            -archivePath $CM_BUILD_DIR/build/MyHandydash.xcarchive archive
+      - name: Export IPA
+        script: |
+          xcodebuild -exportArchive \
+            -archivePath $CM_BUILD_DIR/build/MyHandydash.xcarchive \
+            -exportOptionsPlist ExportOptions.plist \
+            -exportPath $CM_BUILD_DIR/build/ipa
+    artifacts:
+      - build/ipa/*.ipa
+    publishing:
+      # Upload to App Store Connect via Fastlane (configure in UI secrets)
+      scripts:
+        - name: Publish to App Store
+          script: |
+            bundle exec fastlane ios upload
