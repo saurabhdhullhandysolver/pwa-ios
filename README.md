@@ -1,2 +1,0 @@
-# pwa-ios
-pwa ios
